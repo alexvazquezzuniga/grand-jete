@@ -272,12 +272,13 @@ export default function Page(){
   </div>
 
   return <div className="app">
-    <aside>
+    <aside className="sidebar">
+      <div className="sidebarInner">
       <div className="brand">
         <img src="/grand-jete-logo.png" alt="Grand Jeté"/>
       </div>
 
-      <nav>
+      <nav className="nav">
         {([
           ['inicio','Inicio'],
           ['alumnos','Alumnos'],
@@ -299,9 +300,10 @@ export default function Page(){
         <div className="small">Administrador</div>
         <button className="link" onClick={logout}>Cerrar sesión</button>
       </div>
+      </div>
     </aside>
 
-    <main>
+    <main className="main">
       {error&&<div className="error">{error}</div>}
       {message&&<div className="success">{message}</div>}
 
