@@ -1,0 +1,4 @@
+export function F({name,label,type='text',value='',required=false}:any){return <div className="field"><label>{label}</label><input name={name} type={type} defaultValue={value??''} required={required} step={type==='number'?'.01':undefined}/></div>}
+export function Sel({name,label,value,options}:any){return <div className="field"><label>{label}</label><select name={name} defaultValue={value}>{options.map((x:string)=><option key={x} value={x}>{x}</option>)}</select></div>}
+export function TA({name,label,value=''}:any){return <div className="field full"><label>{label}</label><textarea name={name} defaultValue={value??''}/></div>}
+export function Save({label='Guardar',disabled=false}:any){return <div className="full right"><button className="btn primary" disabled={disabled}>{label}</button></div>}

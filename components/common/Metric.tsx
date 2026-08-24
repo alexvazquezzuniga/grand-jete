@@ -1,0 +1,1 @@
+export default function Metric({label,value,note}:any){return <div className="card metric"><div className="label">{label}</div><div className="value">{value}</div><div className="note">{note}</div></div>}
