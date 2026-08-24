@@ -60,7 +60,24 @@ export default function Page(){
     setStudents(s.data||[]);setTeachers(t.data||[]);setWorkshops(w.data||[]);setEnrollments(e.data||[]);setPayments(p.data||[]);setExpenses(x.data||[])
   }
 
-  async function login(ev:FormEvent){ev.preventDefault();setError('');const {error}=await supabase.auth.signInWithPassword({email,password});if(error)setError(error.message)}
+  async function login(ev:FormEvent){ev.preventDefault();setError('');setMessage('');const {error}=await supabase.auth.signInWithPassword({email,password});if(error)setError(error.message)}
+
+  async function recoverPassword(){
+    setError('')
+    setMessage('')
+    if(!email){
+      setError('Escribe primero tu correo.')
+      return
+    }
+    const redirectTo = `${window.location.origin}/reset-password`
+    const { error } = await supabase.auth.resetPasswordForEmail(email,{ redirectTo })
+    if(error){
+      setError(error.message)
+      return
+    }
+    setMessage('Te enviamos un correo para restablecer tu contraseña.')
+  }
+
   async function logout(){await supabase.auth.signOut();setProfile(null);setSection('inicio')}
   function notify(msg:string){setMessage(msg);setTimeout(()=>setMessage(''),2200)}
 
@@ -79,7 +96,7 @@ export default function Page(){
   const out=monthlyExpenses.reduce((s,p)=>s+Number(p.amount||0),0)
 
   if(loading)return <div className="loginWrap"><div className="loginCard">Cargando…</div></div>
-  if(!session||!profile)return <div className="loginWrap"><form className="loginCard" onSubmit={login}><img src="/grand-jete-logo.png" className="loginLogo" alt="Grand Jeté"/><h1 style={{textAlign:'center',fontSize:22}}>Administración</h1><p className="sub" style={{textAlign:'center',marginBottom:22}}>Ingresa con tu cuenta autorizada.</p>{error&&<div className="error">{error}</div>}<div className="field"><label>Correo</label><input type="email" required value={email} onChange={e=>setEmail(e.target.value)}/></div><div className="field"><label>Contraseña</label><input type="password" required value={password} onChange={e=>setPassword(e.target.value)}/></div><button className="btn primary" style={{width:'100%'}}>Entrar</button></form></div>
+  if(!session||!profile)return <div className="loginWrap"><form className="loginCard" onSubmit={login}><img src="/grand-jete-logo.png" className="loginLogo" alt="Grand Jeté"/><h1 style={{textAlign:'center',fontSize:22}}>Administración</h1><p className="sub" style={{textAlign:'center',marginBottom:22}}>Ingresa con tu cuenta autorizada.</p>{error&&<div className="error">{error}</div>}{message&&<div className="success">{message}</div>}<div className="field"><label>Correo</label><input type="email" required value={email} onChange={e=>setEmail(e.target.value)}/></div><div className="field"><label>Contraseña</label><input type="password" required value={password} onChange={e=>setPassword(e.target.value)}/></div><button className="btn primary" style={{width:'100%'}}>Entrar</button><button type="button" className="link" onClick={recoverPassword} style={{display:'block',margin:'16px auto 0'}}>Olvidé mi contraseña</button></form></div>
 
   const nav:[Section,string][]=[['inicio','Inicio'],['alumnos','Alumnos'],['talleres','Talleres'],['maestros','Maestros'],['inscripciones','Inscripciones'],['pagos','Pagos'],['gastos','Gastos'],['finanzas','Finanzas']]
   return <div className="app"><aside className="sidebar"><div className="sidebarInner"><div className="brand"><img src="/grand-jete-logo.png" alt="Grand Jeté"/></div><div className="nav">{nav.map(([k,l])=><button key={k} className={section===k?'active':''} onClick={()=>setSection(k)}>{l}</button>)}</div><div className="userBox"><b>{profile.full_name}</b><br/>Administrador<br/><button className="link" style={{marginTop:8}} onClick={logout}>Cerrar sesión</button></div></div></aside><main className="main">{error&&<div className="error">{error}</div>}{message&&<div className="success">{message}</div>}{section==='inicio'&&<Home students={students} teachers={teachers} workshops={workshops} payments={payments} income={income} out={out} setSection={setSection}/>} {section==='alumnos'&&<Students rows={students} query={query} setQuery={setQuery} edit={r=>setModal({type:'student',row:r})} add={()=>setModal({type:'student'})} remove={id=>removeRow('students',id)}/>} {section==='maestros'&&<Teachers rows={teachers} edit={r=>setModal({type:'teacher',row:r})} add={()=>setModal({type:'teacher'})} remove={id=>removeRow('teachers',id)}/>} {section==='talleres'&&<Workshops rows={workshops} teachers={teachers} enrollments={enrollments} edit={r=>setModal({type:'workshop',row:r})} add={()=>setModal({type:'workshop'})} remove={id=>removeRow('workshops',id)}/>} {section==='inscripciones'&&<Enrollments rows={enrollments} students={students} workshops={workshops} add={()=>setModal({type:'enrollment'})} remove={id=>removeRow('enrollments',id)}/>} {section==='pagos'&&<Payments rows={payments} students={students} add={()=>setModal({type:'payment'})} remove={id=>removeRow('payments',id)}/>} {section==='gastos'&&<Expenses rows={expenses} add={()=>setModal({type:'expense'})} remove={id=>removeRow('expenses',id)}/>} {section==='finanzas'&&<Finance month={month} setMonth={setMonth} payments={monthlyPayments} expenses={monthlyExpenses} income={income} out={out} teachers={teachers}/>} </main>{modal&&<EntryModal modal={modal} close={()=>setModal(null)} save={saveRow} profile={profile} students={students} teachers={teachers} workshops={workshops}/>}</div>
