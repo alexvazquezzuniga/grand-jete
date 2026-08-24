@@ -6,7 +6,7 @@ import { createClient } from '@/utils/supabase/client'
 const supabase = createClient()
 
 type Row = Record<string, any>
-type Section = 'inicio'|'alumnos'|'maestros'|'talleres'|'inscripciones'|'pagos'|'gastos'|'finanzas'
+type Section = 'inicio'|'maestros'|'talleres'|'inscripciones'|'pagos'|'gastos'|'finanzas'
 
 const money=(n:any)=>new Intl.NumberFormat('es-MX',{style:'currency',currency:'MXN',maximumFractionDigits:0}).format(Number(n||0))
 const today=()=>new Date().toISOString().slice(0,10)
@@ -220,6 +220,113 @@ export default function Page(){
     return true
   }
 
+  async function saveEnrollmentV2(data:Row){
+    setError('')
+
+    const workshop=workshops.find((w:Row)=>w.id===data.workshop_id)
+    if(!workshop){
+      setError('Selecciona un taller válido.')
+      return false
+    }
+
+    const officialFee=Number(workshop.monthly_fee||0)
+    const discount=Number(data.discount||0)
+
+    if(discount<0){
+      setError('El descuento no puede ser negativo.')
+      return false
+    }
+
+    if(discount>officialFee){
+      setError('El descuento no puede ser mayor que la mensualidad del taller.')
+      return false
+    }
+
+    let studentId=String(data.student_id||'')
+    let createdStudentId:string|null=null
+
+    if(data.mode==='new'){
+      const studentPayload={
+        full_name:String(data.full_name||'').trim(),
+        birth_date:data.birth_date||null,
+        phone:String(data.phone||'').trim()||null,
+        email:String(data.email||'').trim()||null,
+        guardian_name:String(data.guardian_name||'').trim()||null,
+        guardian_phone:String(data.guardian_phone||'').trim()||null,
+        emergency_contact:String(data.emergency_contact||'').trim()||null,
+        emergency_phone:String(data.emergency_phone||'').trim()||null,
+        enrollment_date:data.start_date||today(),
+        status:'active',
+        notes:String(data.student_notes||'').trim()||null,
+      }
+
+      if(!studentPayload.full_name){
+        setError('Escribe el nombre del alumno.')
+        return false
+      }
+
+      const {data:newStudent,error:studentError}=await supabase
+        .from('students')
+        .insert(studentPayload)
+        .select('id')
+        .single()
+
+      if(studentError){
+        setError(studentError.message)
+        return false
+      }
+
+      studentId=newStudent.id
+      createdStudentId=newStudent.id
+    }
+
+    if(!studentId){
+      setError('Selecciona un alumno existente o registra uno nuevo.')
+      return false
+    }
+
+    const duplicate=enrollments.some((e:Row)=>
+      e.student_id===studentId &&
+      e.workshop_id===data.workshop_id &&
+      e.status==='active'
+    )
+
+    if(duplicate){
+      if(createdStudentId){
+        await supabase.from('students').delete().eq('id',createdStudentId)
+      }
+      setError('Este alumno ya tiene una inscripción activa en ese taller.')
+      return false
+    }
+
+    const enrollmentPayload={
+      student_id:studentId,
+      workshop_id:data.workshop_id,
+      start_date:data.start_date||today(),
+      agreed_monthly_fee:officialFee,
+      discount,
+      status:data.status||'active',
+      notes:String(data.notes||'').trim()||null,
+    }
+
+    const {error:enrollmentError}=await supabase
+      .from('enrollments')
+      .insert(enrollmentPayload)
+
+    if(enrollmentError){
+      if(createdStudentId){
+        await supabase.from('students').delete().eq('id',createdStudentId)
+      }
+      setError(enrollmentError.message)
+      return false
+    }
+
+    setModal(null)
+    await refreshAll()
+    notify(data.mode==='new'?'Alumno e inscripción creados correctamente':'Inscripción creada correctamente')
+    return true
+  }
+
   async function removeRow(table:string,id:string){
     if(!confirm('¿Eliminar este registro?'))return
 
@@ -281,7 +388,6 @@ export default function Page(){
       <nav className="nav">
         {([
           ['inicio','Inicio'],
-          ['alumnos','Alumnos'],
           ['talleres','Talleres'],
           ['maestros','Maestros'],
           ['inscripciones','Inscripciones'],
@@ -319,16 +425,6 @@ export default function Page(){
         />
       }
 
-      {section==='alumnos'&&
-        <Students
-          rows={students}
-          query={query}
-          setQuery={setQuery}
-          edit={(r:Row)=>setModal({type:'student',row:r})}
-          add={()=>setModal({type:'student'})}
-          remove={(id:string)=>removeRow('students',id)}
-        />
-      }
 
       {section==='maestros'&&
         <Teachers
@@ -357,6 +453,7 @@ export default function Page(){
           students={students}
           workshops={workshops}
           add={()=>setModal({type:'enrollment'})}
+          editStudent={(r:Row)=>setModal({type:'student',row:r})}
           remove={(id:string)=>removeRow('enrollments',id)}
         />
       }
@@ -397,6 +494,7 @@ export default function Page(){
         close={()=>setModal(null)}
         save={saveRow}
         saveWorkshop={saveWorkshop}
+        saveEnrollmentV2={saveEnrollmentV2}
         profile={profile}
         students={students}
         teachers={teachers}
@@ -646,9 +744,14 @@ function Workshops({rows,teachers,enrollments,schedules,edit,add,remove}:any){
   </>
 }
 
-function Enrollments({rows,students,workshops,add,remove}:any){
+function Enrollments({rows,students,workshops,add,editStudent,remove}:any){
   return <>
-    <Header title="Inscripciones" sub="Relaciona alumnos con talleres conservando historial." action={add} label="Nueva inscripción"/>
+    <Header
+      title="Inscripciones"
+      sub="Alta de alumnos, talleres y mensualidades en un solo proceso."
+      action={add}
+      label="Nueva inscripción"
+    />
 
     <div className="card">
       {rows.length?
@@ -658,7 +761,9 @@ function Enrollments({rows,students,workshops,add,remove}:any){
               <th>Alumno</th>
               <th>Taller</th>
               <th>Inicio</th>
-              <th>Mensualidad</th>
+              <th>Tarifa</th>
+              <th>Descuento</th>
+              <th>Mensualidad final</th>
               <th>Estado</th>
               <th></th>
             </tr>
@@ -668,19 +773,27 @@ function Enrollments({rows,students,workshops,add,remove}:any){
             {rows.map((r:Row)=>{
               const s=students.find((x:Row)=>x.id===r.student_id)
               const w=workshops.find((x:Row)=>x.id===r.workshop_id)
+              const agreed=Number(r.agreed_monthly_fee||0)
+              const discount=Number(r.discount||0)
 
               return <tr key={r.id}>
-                <td>{s?.full_name||'—'}</td>
+                <td>
+                  <b>{s?.full_name||'—'}</b>
+                  <div className="small">{s?.guardian_name||s?.phone||''}</div>
+                </td>
                 <td>{w?.name||'—'}</td>
-                <td>{r.start_date}</td>
-                <td>{money(Number(r.agreed_monthly_fee)-Number(r.discount||0))}</td>
+                <td>{r.start_date||'—'}</td>
+                <td>{money(agreed)}</td>
+                <td>{discount?money(discount):'—'}</td>
+                <td><b>{money(Math.max(0,agreed-discount))}</b></td>
                 <td>
                   <span className={`pill ${r.status==='active'?'ok':'neutral'}`}>
                     {r.status}
                   </span>
                 </td>
                 <td>
-                  <button className="link" onClick={()=>remove(r.id)}>Eliminar</button>
+                  {s&&<><button className="link" onClick={()=>editStudent(s)}>Expediente</button> · </>}
+                  <button className="link" onClick={()=>remove(r.id)}>Eliminar inscripción</button>
                 </td>
               </tr>
             })}
@@ -1048,7 +1161,190 @@ function WorkshopScheduleFields({initial=[]}:{initial?:Row[]}){
   </div>
 }
 
-function EntryModal({modal,close,save,saveWorkshop,profile,students,teachers,workshops,workshopSchedules}:any){
+function EnrollmentV2Form({students,workshops,onSave}:any){
+  const [mode,setMode]=useState<'new'|'existing'>('new')
+  const [workshopId,setWorkshopId]=useState('')
+  const [discount,setDiscount]=useState(0)
+  const [saving,setSaving]=useState(false)
+
+  const activeWorkshops=workshops.filter((w:Row)=>w.status==='active')
+  const selectedWorkshop=activeWorkshops.find((w:Row)=>w.id===workshopId)
+  const officialFee=Number(selectedWorkshop?.monthly_fee||0)
+  const finalFee=Math.max(0,officialFee-Number(discount||0))
+
+  async function submit(ev:FormEvent<HTMLFormElement>){
+    ev.preventDefault()
+    const fd=new FormData(ev.currentTarget)
+    setSaving(true)
+
+    const payload={
+      mode,
+      student_id:mode==='existing'?String(fd.get('student_id')||''):'',
+      full_name:mode==='new'?String(fd.get('full_name')||''):'',
+      birth_date:mode==='new'?String(fd.get('birth_date')||''):'',
+      phone:mode==='new'?String(fd.get('phone')||''):'',
+      email:mode==='new'?String(fd.get('email')||''):'',
+      guardian_name:mode==='new'?String(fd.get('guardian_name')||''):'',
+      guardian_phone:mode==='new'?String(fd.get('guardian_phone')||''):'',
+      emergency_contact:mode==='new'?String(fd.get('emergency_contact')||''):'',
+      emergency_phone:mode==='new'?String(fd.get('emergency_phone')||''):'',
+      student_notes:mode==='new'?String(fd.get('student_notes')||''):'',
+      workshop_id:String(fd.get('workshop_id')||''),
+      start_date:String(fd.get('start_date')||today()),
+      discount:Number(fd.get('discount')||0),
+      status:String(fd.get('status')||'active'),
+      notes:String(fd.get('notes')||''),
+    }
+
+    await onSave(payload)
+    setSaving(false)
+  }
+
+  return <form onSubmit={submit}>
+    <div className="formGrid">
+      <div className="field full">
+        <label>Alumno</label>
+        <div style={{display:'flex',gap:8,marginTop:4}}>
+          <button
+            type="button"
+            onClick={()=>setMode('new')}
+            style={{
+              flex:1,
+              padding:'10px 12px',
+              borderRadius:9,
+              border:'1px solid #d8d0c6',
+              background:mode==='new'?'#24211f':'#fff',
+              color:mode==='new'?'#fff':'#24211f',
+              cursor:'pointer',
+              fontWeight:600,
+            }}
+          >
+            Alumno nuevo
+          </button>
+          <button
+            type="button"
+            onClick={()=>setMode('existing')}
+            style={{
+              flex:1,
+              padding:'10px 12px',
+              borderRadius:9,
+              border:'1px solid #d8d0c6',
+              background:mode==='existing'?'#24211f':'#fff',
+              color:mode==='existing'?'#fff':'#24211f',
+              cursor:'pointer',
+              fontWeight:600,
+            }}
+          >
+            Alumno existente
+          </button>
+        </div>
+      </div>
+
+      {mode==='existing'?
+        <div className="field full">
+          <label>Seleccionar alumno *</label>
+          <select name="student_id" required>
+            <option value="">Seleccionar…</option>
+            {students
+              .filter((s:Row)=>s.status!=='inactive')
+              .map((s:Row)=>
+                <option key={s.id} value={s.id}>{s.full_name}</option>
+              )
+            }
+          </select>
+        </div>
+        :
+        <>
+          <F name="full_name" label="Nombre completo *" required/>
+          <F name="birth_date" label="Fecha de nacimiento" type="date"/>
+          <F name="phone" label="Teléfono"/>
+          <F name="email" label="Correo" type="email"/>
+          <F name="guardian_name" label="Tutor / responsable"/>
+          <F name="guardian_phone" label="Teléfono tutor"/>
+          <F name="emergency_contact" label="Contacto de emergencia"/>
+          <F name="emergency_phone" label="Teléfono emergencia"/>
+          <TA name="student_notes" label="Notas del expediente"/>
+        </>
+      }
+
+      <div className="field full" style={{marginTop:4}}>
+        <div style={{height:1,background:'#e7dfd5',margin:'4px 0 12px'}}/>
+        <b>Inscripción al taller</b>
+      </div>
+
+      <div className="field">
+        <label>Taller *</label>
+        <select
+          name="workshop_id"
+          required
+          value={workshopId}
+          onChange={e=>setWorkshopId(e.target.value)}
+        >
+          <option value="">Seleccionar…</option>
+          {activeWorkshops.map((w:Row)=>
+            <option key={w.id} value={w.id}>{w.name}</option>
+          )}
+        </select>
+      </div>
+
+      <F name="start_date" label="Fecha de inicio" type="date" value={today()}/>
+
+      <div className="field">
+        <label>Mensualidad del taller</label>
+        <div style={{
+          height:42,
+          display:'flex',
+          alignItems:'center',
+          padding:'0 12px',
+          border:'1px solid #e4ddd3',
+          borderRadius:9,
+          background:'#f7f4ef',
+          fontWeight:700,
+        }}>
+          {workshopId?money(officialFee):'Selecciona un taller'}
+        </div>
+      </div>
+
+      <div className="field">
+        <label>Descuento / beca</label>
+        <input
+          name="discount"
+          type="number"
+          min="0"
+          step=".01"
+          value={discount}
+          onChange={e=>setDiscount(Number(e.target.value||0))}
+        />
+      </div>
+
+      <div className="field full">
+        <div style={{
+          display:'flex',
+          justifyContent:'space-between',
+          alignItems:'center',
+          padding:'12px 14px',
+          borderRadius:10,
+          background:'#f3eee6',
+          border:'1px solid #e3d9cc',
+        }}>
+          <span>Mensualidad final</span>
+          <strong style={{fontSize:20}}>{money(finalFee)}</strong>
+        </div>
+      </div>
+
+      <Sel name="status" label="Estado" value="active" options={['active','paused','inactive']}/>
+      <TA name="notes" label="Notas de la inscripción"/>
+
+      <div className="full right">
+        <button className="btn primary" disabled={saving}>
+          {saving?'Guardando…':'Guardar inscripción'}
+        </button>
+      </div>
+    </div>
+  </form>
+}
+
+function EntryModal({modal,close,save,saveWorkshop,saveEnrollmentV2,profile,students,teachers,workshops,workshopSchedules}:any){
   const r=modal.row||{}
 
   const submit=(table:string,transform?:(o:Row)=>Row)=>(ev:FormEvent<HTMLFormElement>)=>{
@@ -1180,51 +1476,11 @@ function EntryModal({modal,close,save,saveWorkshop,profile,students,teachers,wor
 
   if(modal.type==='enrollment'){
     title='Nueva inscripción'
-
-    body=<form onSubmit={submit('enrollments',o=>{
-      const w=workshops.find((x:Row)=>x.id===o.workshop_id)
-
-      return {
-        ...o,
-        agreed_monthly_fee:Number(o.agreed_monthly_fee||w?.monthly_fee||0),
-        discount:Number(o.discount||0),
-      }
-    })}>
-      <div className="formGrid">
-        <div className="field">
-          <label>Alumno *</label>
-          <select name="student_id" required>
-            <option value="">Seleccionar…</option>
-            {students
-              .filter((s:Row)=>s.status!=='inactive')
-              .map((s:Row)=>
-                <option key={s.id} value={s.id}>{s.full_name}</option>
-              )
-            }
-          </select>
-        </div>
-
-        <div className="field">
-          <label>Taller *</label>
-          <select name="workshop_id" required>
-            <option value="">Seleccionar…</option>
-            {workshops
-              .filter((w:Row)=>w.status==='active')
-              .map((w:Row)=>
-                <option key={w.id} value={w.id}>{w.name}</option>
-              )
-            }
-          </select>
-        </div>
-
-        <F name="start_date" label="Fecha de inicio" type="date" value={today()}/>
-        <F name="agreed_monthly_fee" label="Mensualidad acordada" type="number" value=""/>
-        <F name="discount" label="Descuento / beca" type="number" value="0"/>
-        <Sel name="status" label="Estado" value="active" options={['active','paused','inactive']}/>
-        <TA name="notes" label="Notas"/>
-        <Save/>
-      </div>
-    </form>
+    body=<EnrollmentV2Form
+      students={students}
+      workshops={workshops}
+      onSave={saveEnrollmentV2}
+    />
   }
 
   if(modal.type==='payment'){
