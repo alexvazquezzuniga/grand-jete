@@ -84,8 +84,8 @@ className="public-nav"
             <a href="#inscripciones">Inscripciones</a>
             <a href="#contacto">Contacto</a>
 
-            <Link
-              href="/admin"
+            <Link 
+            href="https://app.grandjete.mx"
               style={{
                 border: '1px solid #b78a36',
                 padding: '14px 18px',
