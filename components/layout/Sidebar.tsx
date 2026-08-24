@@ -1,0 +1,4 @@
+'use client'
+import type { Section } from '@/types/academy'
+const items:[Section,string][]=[['inicio','Inicio'],['alumnos','Alumnos'],['inscripciones','Inscripciones'],['talleres','Talleres'],['maestros','Maestros'],['pagos','Pagos'],['gastos','Gastos'],['finanzas','Finanzas']]
+export default function Sidebar({section,setSection,profile,logout}:any){return <aside className="sidebar"><div className="sidebarInner"><div className="brand"><img src="/grand-jete-logo.png" alt="Grand Jeté"/></div><nav className="nav">{items.map(([id,label])=><button key={id} className={section===id?'active':''} onClick={()=>setSection(id)}>{label}</button>)}</nav><div className="userBox"><b>{profile.full_name||'Administrador'}</b><div className="small">Administrador</div><button className="link" onClick={logout}>Cerrar sesión</button></div></div></aside>}
