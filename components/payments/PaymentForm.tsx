@@ -1,3 +1,104 @@
 'use client'
-import type {FormEvent} from 'react'; import type {Row} from '@/types/academy'; import {F,Sel,TA,Save} from '@/components/common/FormFields'; import {today} from '@/lib/academy/format'
-export default function PaymentForm({students,profile,onSave}:any){function submit(e:FormEvent<HTMLFormElement>){e.preventDefault(); const o=Object.fromEntries(new FormData(e.currentTarget) as any); onSave({...o,amount:Number(o.amount),registered_by:profile.id})} return <form onSubmit={submit}><div className="formGrid"><div className="field"><label>Alumno *</label><select name="student_id" required><option value="">Seleccionar…</option>{students.map((s:Row)=><option key={s.id} value={s.id}>{s.full_name}</option>)}</select></div><Sel name="concept" label="Concepto" value="monthly_fee" options={['monthly_fee','registration','costume','special_class','other']}/><F name="amount" label="Importe *" type="number" required/><F name="payment_date" label="Fecha" type="date" value={today()}/><Sel name="payment_method" label="Método" value="cash" options={['cash','transfer','card','other']}/><F name="reference" label="Referencia"/><TA name="notes" label="Notas"/><Save/></div></form>}
+
+import type { FormEvent } from 'react'
+import type { Row } from '@/types/academy'
+import { F, Sel, TA, Save } from '@/components/common/FormFields'
+import { today } from '@/lib/academy/format'
+
+export default function PaymentForm({
+  students,
+  profile,
+  onSave,
+}: any) {
+  function submit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+
+    const o = Object.fromEntries(
+      new FormData(e.currentTarget) as any
+    )
+
+    onSave({
+      ...o,
+      amount: Number(o.amount),
+      registered_by: profile.id,
+    })
+  }
+
+  return (
+    <form onSubmit={submit}>
+      <div className="formGrid">
+        <div className="field">
+          <label>Alumno *</label>
+
+          <select name="student_id" required>
+            <option value="">
+              Seleccionar…
+            </option>
+
+            {students.map((s: Row) => (
+              <option
+                key={s.id}
+                value={s.id}
+              >
+                {s.full_name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <Sel
+          name="concept"
+          label="Concepto"
+          value="monthly_fee"
+          options={[
+            'monthly_fee',
+            'registration',
+            'costume',
+            'special_class',
+            'rent',
+            'rehearsal',
+            'other',
+          ]}
+        />
+
+        <F
+          name="amount"
+          label="Importe *"
+          type="number"
+          required
+        />
+
+        <F
+          name="payment_date"
+          label="Fecha"
+          type="date"
+          value={today()}
+        />
+
+        <Sel
+          name="payment_method"
+          label="Método"
+          value="cash"
+          options={[
+            'cash',
+            'transfer',
+            'card',
+            'other',
+          ]}
+        />
+
+        <F
+          name="reference"
+          label="Referencia"
+        />
+
+        <TA
+          name="notes"
+          label="Notas"
+        />
+
+        <Save />
+      </div>
+    </form>
+  )
+}

@@ -6,6 +6,7 @@ const labels: Record<string, string> = {
   cancelled: 'Cancelado',
   pending: 'Pendiente',
   completed: 'Completado',
+  closed: 'Cerrado',
 
   // Esquemas de pago de maestros
   monthly: 'Mensual',
@@ -22,7 +23,16 @@ const labels: Record<string, string> = {
   card: 'Tarjeta',
   deposit: 'Depósito',
 
-  // Conceptos frecuentes
+  // Conceptos de cobro
+  monthly_fee: 'Mensualidad',
+  registration: 'Inscripción',
+  costume: 'Vestuario',
+  special_class: 'Clase especial',
+  rent: 'Renta',
+  rehearsal: 'Ensayos',
+  other: 'Otro',
+
+  // Conceptos anteriores / compatibilidad
   tuition: 'Mensualidad',
   enrollment: 'Inscripción',
   reenrollment: 'Reinscripción',
@@ -46,6 +56,7 @@ export function F({
   return (
     <div className="field">
       <label>{label}</label>
+
       <input
         name={name}
         type={type}
@@ -67,12 +78,20 @@ export function Sel({
     <div className="field">
       <label>{label}</label>
 
-      <select name={name} defaultValue={value}>
+      <select
+        name={name}
+        defaultValue={value}
+      >
         {options.map((option: any) => {
-          // Permite tanto ['active', 'inactive']
-          // como [{ value: 'active', label: 'Activo' }]
+          // Permite tanto:
+          // ['active', 'inactive']
+          // como:
+          // [{ value: 'active', label: 'Activo' }]
+
           const optionValue =
-            typeof option === 'string' ? option : option.value
+            typeof option === 'string'
+              ? option
+              : option.value
 
           const optionLabel =
             typeof option === 'string'
@@ -101,6 +120,7 @@ export function TA({
   return (
     <div className="field full">
       <label>{label}</label>
+
       <textarea
         name={name}
         defaultValue={value ?? ''}
