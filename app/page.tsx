@@ -1,136 +1,82 @@
 import Image from 'next/image'
 import Link from 'next/link'
 
+const menuItems = [
+  ['#academia', 'La Academia'],
+  ['#disciplinas', 'Disciplinas'],
+  ['#maestros', 'Maestros'],
+  ['#horarios', 'Horarios'],
+  ['#galeria', 'Galería'],
+  ['#inscripciones', 'Inscripciones'],
+  ['#contacto', 'Contacto'],
+]
+
 export default function Page() {
   return (
-    <main
-      style={{
-        minHeight: '100vh',
-        background: '#080808',
-        color: '#fff',
-        fontFamily: 'Arial, sans-serif',
-      }}
-    >
-      <section
-        style={{
-          minHeight: '100vh',
-          position: 'relative',
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column',
-          background:
-            'linear-gradient(90deg, rgba(0,0,0,.98) 0%, rgba(0,0,0,.82) 38%, rgba(0,0,0,.25) 70%, rgba(0,0,0,.45) 100%)',
-        }}
-      >
-        {/* Fondo temporal */}
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            background:
-              'radial-gradient(circle at 70% 40%, #555 0%, #252525 30%, #090909 70%)',
-            zIndex: 0,
-          }}
-        />
+    <main className="public-site">
+      <section className="public-hero">
+        <div className="public-hero-background" />
 
-        <header
-          style={{
-            position: 'relative',
-            zIndex: 2,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 30,
-            padding: '28px 5vw',
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 18,
-            }}
-          >
+        <header className="public-header">
+          <a href="/" className="public-logo-link">
             <Image
               src="/grand-jete-logo.png"
               alt="Grand Jeté Academia de Danza"
-              width={170}
-              height={140}
+              width={190}
+              height={150}
               priority
-              style={{
-                width: 170,
-                height: 'auto',
-                filter: 'invert(1)',
-              }}
+              className="public-logo"
             />
-          </div>
+          </a>
 
-          <nav
-  style={{
-  display: 'flex',
-  alignItems: 'center',
-  gap: 28,
-  fontSize: 13,
-  letterSpacing: 1.5,
-  textTransform: 'uppercase',
-}}
-className="public-nav"
->
-            <a href="#academia">La Academia</a>
-            <a href="#disciplinas">Disciplinas</a>
-            <a href="#maestros">Maestros</a>
-            <a href="#horarios">Horarios</a>
-            <a href="#galeria">Galería</a>
-            <a href="#inscripciones">Inscripciones</a>
-            <a href="#contacto">Contacto</a>
+          {/* Navegación de escritorio */}
+          <nav className="public-nav public-nav-desktop">
+            {menuItems.map(([href, label]) => (
+              <a key={href} href={href}>
+                {label}
+              </a>
+            ))}
 
-            <Link 
-            href="https://app.grandjete.mx"
-              style={{
-                border: '1px solid #b78a36',
-                padding: '14px 18px',
-                color: '#e1b75f',
-              }}
+            <Link
+              href="https://app.grandjete.mx"
+              className="public-admin-button"
             >
               Administración
             </Link>
           </nav>
+
+          {/* Navegación móvil */}
+          <details className="public-mobile-menu">
+            <summary aria-label="Abrir menú">
+              <span className="public-menu-icon">
+                <i />
+                <i />
+                <i />
+              </span>
+            </summary>
+
+            <nav className="public-mobile-menu-panel">
+              {menuItems.map(([href, label]) => (
+                <a key={href} href={href}>
+                  {label}
+                </a>
+              ))}
+
+              <Link
+                href="https://app.grandjete.mx"
+                className="public-mobile-admin"
+              >
+                Administración
+              </Link>
+            </nav>
+          </details>
         </header>
 
-        <div
-          style={{
-            position: 'relative',
-            zIndex: 2,
-            flex: 1,
-            display: 'flex',
-            alignItems: 'center',
-            padding: '4vh 5vw 10vh',
-          }}
-        >
-          <div
-            style={{
-              maxWidth: 650,
-            }}
-          >
-            <div
-              style={{
-                width: 58,
-                height: 2,
-                background: '#c69a48',
-                marginBottom: 26,
-              }}
-            />
+        <div className="public-hero-content">
+          <div className="public-hero-copy">
+            <div className="public-gold-line" />
 
-            <h1
-              style={{
-                margin: 0,
-                fontFamily: 'Georgia, Times New Roman, serif',
-                fontSize: 'clamp(64px, 8vw, 132px)',
-                fontWeight: 400,
-                lineHeight: 0.88,
-                letterSpacing: -3,
-              }}
-            >
+            <h1>
               NACISTE
               <br />
               PARA
@@ -138,113 +84,57 @@ className="public-nav"
               MOVERTE
             </h1>
 
-            <p
-              style={{
-                marginTop: 38,
-                fontSize: 22,
-                lineHeight: 1.5,
-                maxWidth: 500,
-                color: '#ddd',
-              }}
-            >
-              Grand Jeté · Academia de Danza
-            </p>
+            <p>Grand Jeté · Academia de Danza</p>
 
-            <a
-              href="#academia"
-              style={{
-                display: 'inline-flex',
-                marginTop: 24,
-                padding: '16px 26px',
-                border: '1px solid #c69a48',
-                color: '#e1b75f',
-                letterSpacing: 2,
-                textTransform: 'uppercase',
-                fontSize: 13,
-              }}
-            >
-              Conoce la academia →
+            <a href="#academia" className="public-primary-button">
+              Conoce la academia <span>→</span>
             </a>
           </div>
         </div>
 
-        <div
-  style={{
-    position: 'relative',
-    zIndex: 2,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 30,
-    padding: '24px 5vw',
-    background: 'rgba(0,0,0,.86)',
-    borderTop: '1px solid rgba(255,255,255,.1)',
-  }}
->
-  <div>
-    <div
-      style={{
-        color: '#d7a94e',
-        fontSize: 12,
-        letterSpacing: 2,
-        textTransform: 'uppercase',
-        marginBottom: 7,
-      }}
-    >
-      Grand Jeté · Aguascalientes
-    </div>
+        <div className="public-location-bar">
+          <div>
+            <div className="public-location-title">
+              Grand Jeté · Aguascalientes
+            </div>
 
-    <div
-      style={{
-        color: '#e8e4de',
-        fontSize: 15,
-        lineHeight: 1.5,
-      }}
-    >
-      ENCUÉNTRANOS EN EL DESARROLLO ESPECIAL TALLERES F.F.C.C. (ESTACIONAMIENTO DE CASA REDONDA)
-    </div>
-  </div>
+            <div className="public-location-text">
+              Encuéntranos en el Desarrollo Especial Talleres F.F.C.C.
+              <br className="desktop-break" />
+              {' '}
+              (Estacionamiento de Casa Redonda)
+            </div>
+          </div>
 
-  <a
-    href="https://maps.app.goo.gl/6ECp6WPdwMRr2eJG9"
-    target="_blank"
-    rel="noopener noreferrer"
-    style={{
-      color: '#d7a94e',
-      textDecoration: 'none',
-      fontSize: 13,
-      letterSpacing: 2,
-      textTransform: 'uppercase',
-      whiteSpace: 'nowrap',
-      borderBottom: '1px solid #d7a94e',
-      paddingBottom: 5,
-    }}
-  >
-    Cómo llegar ↗
-  </a>
-</div>
+          <a
+            href="https://maps.app.goo.gl/6ECp6WPdwMRr2eJG9"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="public-maps-link"
+          >
+            Cómo llegar ↗
+          </a>
+        </div>
       </section>
 
-      <section
-        id="academia"
-        style={{
-          minHeight: '70vh',
-          background: '#f5f2ed',
-          color: '#161616',
-          padding: '90px 7vw',
-        }}
-      >
-        <h2
-          style={{
-            fontFamily: 'Georgia, Times New Roman, serif',
-            fontWeight: 400,
-            fontSize: 70,
-            margin: 0,
-          }}
-        >
-          La Academia
-        </h2>
+      <section id="academia" className="public-section public-academy-section">
+        <div className="public-section-kicker">Grand Jeté</div>
+
+        <h2>La Academia</h2>
+
+        <p className="public-section-intro">
+          Un espacio para descubrir el movimiento, desarrollar la técnica
+          y hacer de la danza una forma de expresión.
+        </p>
       </section>
+
+      {/* Secciones preparadas para seguir construyendo */}
+      <section id="disciplinas" className="public-anchor-section" />
+      <section id="maestros" className="public-anchor-section" />
+      <section id="horarios" className="public-anchor-section" />
+      <section id="galeria" className="public-anchor-section" />
+      <section id="inscripciones" className="public-anchor-section" />
+      <section id="contacto" className="public-anchor-section" />
     </main>
   )
 }
